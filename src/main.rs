@@ -1,59 +1,39 @@
-use std::io;
+use std::io::{self, Write};
 
 use clap::{CommandFactory as _, Parser};
 use clap_complete::generate;
-use miette::Result;
-use nsw::{Api, Cli, trades::authenticate};
-use serde::Deserialize;
+use miette::{IntoDiagnostic, Result};
+use nsw::{
+    Api, Cli,
+    trades::{authenticate, browse::browse},
+    write_csv,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     miette::set_panic_hook();
     let _ = dotenvy::dotenv();
     let mut command = Cli::command();
+    let name = Cli::command().get_name().to_string();
 
     let cli = Cli::parse();
+    cli.color.write_global();
     match cli.api {
         Api::AutoComplete { shell } => {
-            generate(shell, &mut command, "nsw", &mut io::stdout());
+            let mut buff = io::stdout();
+            generate(shell, &mut command, name, &mut buff);
+            buff.flush().into_diagnostic()?;
             return Ok(());
         }
-        Api::Trades { creds } => {
-            let res = authenticate(&creds).await;
-            println!("{:?}", res);
+        Api::Trades {
+            creds,
+            search_terms,
+            csv_output,
+        } => {
+            let token = authenticate(&creds).await?;
+            let results = browse(&creds, &token, search_terms.unwrap_or_default().as_str()).await?;
+            write_csv(results, csv_output)?;
         }
     }
     Ok(())
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-pub struct BuilderBasic {
-    licence_id: String,
-    licence_number: String,
-    licence_type: String,
-    licence_type_friendly: String,
-    licence_group: String,
-    status: String,
-    granted: String,
-    expires: String,
-    licensee: String,
-    licensee_type: String,
-    suburb: String,
-    state: String,
-    postcode: String,
-    address: String,
-    abn: Option<String>,
-    acn: Option<String>,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Status {
-    Current,
-    Expired,
-    Surrendered,
-    Suspended,
-    Refused,
-    Lapsed,
-    Cancelled,
-    Deregulated,
 }

@@ -1,16 +1,24 @@
+use std::fmt::Display;
+
 use miette::{IntoDiagnostic, Result};
 use reqwest::{
     ClientBuilder,
-    header::{AUTHORIZATION, HeaderMap, HeaderValue},
+    header::{AUTHORIZATION, HeaderMap},
 };
 use serde::Deserialize;
 
 use crate::BASE_URL;
 use crate::cli::Credentials;
-mod browse;
+pub mod browse;
 
 #[derive(Debug)]
 pub struct Token(String);
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl Token {
     pub const fn as_str(&self) -> &str {
