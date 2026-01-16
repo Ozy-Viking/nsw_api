@@ -56,6 +56,7 @@ pub enum Status {
     Refused,
     Lapsed,
     Cancelled,
+    #[serde(rename(deserialize = "Deregulated - No longer issued"))]
     Deregulated,
 }
 
